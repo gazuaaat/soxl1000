@@ -1,0 +1,11 @@
+{
+  "title": "SOXL로 하루 $1,000 벌기",
+  "exchange": "Binance USDⓈ-M Futures (본계정, SOXLUSDT 거래만 집계)",
+  "symbol": "SOXLUSDT",
+  "goal_per_day": 1000,
+  "start_date": "2026-11-02",
+  "start_equity": 30000,
+  "session_cutoff_hour_kst": 7,
+  "youtube_url": "https://www.youtube.com/channel/UCs7fQBmuJM6li0dWTB-H32g",
+  "equity_source": "virtual"
+}
