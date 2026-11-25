@@ -1832,12 +1832,12 @@
     "other": 0.0
   },
   "net_pnl": 1660.54,
-  "wins": 30,
-  "losses": 13,
+  "wins": 9,
+  "losses": 2,
   "volume": 908754.88,
   "equity_end": 51660.54,
   "wallet_end": 51660.54,
   "unrealized_end": 0.0,
-  "collected_at": "2026-11-25T17:21:20+09:00",
+  "collected_at": "2026-11-26T08:04:05+09:00",
   "sample": false
 }
