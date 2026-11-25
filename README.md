@@ -10,7 +10,33 @@ shorts.html            쇼츠 마지막 화면용 결과 카드 (1080x1920)
 
 > 지금 `data/` 안의 데이터는 **샘플**이다. 실제 수집을 시작하기 전에 지운다(아래 3단계 참고).
 
-## 1. 바이낸스 준비
+## 0. 추천: 기존 싱가포르 서버(portfolio_bot)에서 돌리기
+이미 바이낸스 API가 동작하는 DigitalOcean 서버(`ubuntu-s-1vcpu-1gb-sgp1`)에서 같은 키로 수집한다. 집 PC를 켜둘 필요가 없다.
+
+```bash
+# 1) bot 사용자로 저장소 받기 (push 용 배포키는 아래 3번)
+su - bot
+git clone git@github.com:gazuaaat/soxl1000.git ~/soxl1000
+cd ~/soxl1000
+python3 -m venv .venv && .venv/bin/pip install -r collector/requirements.txt
+
+# 2) portfolio_bot 키 재사용 (config.json 위치는 ls 로 확인)
+ls ~/binance/portfolio_bot/config.json
+echo "BINANCE_CONFIG_JSON=$HOME/binance/portfolio_bot/config.json" > collector/.env
+
+# 3) 테스트 (어제 세션 수집)
+.venv/bin/python collector/collect.py
+```
+- **push 권한:** 서버에서 `ssh-keygen -t ed25519 -f ~/.ssh/soxl1000 -N ""`로 키를 만든다. `~/.ssh/soxl1000.pub` 내용을 저장소 Settings → Deploy keys에 **Allow write access**를 체크해서 등록한다. `~/.ssh/config`에 아래를 넣는다.
+  ```
+  Host github.com
+    IdentityFile ~/.ssh/soxl1000
+  ```
+- **매일 자동 실행:** 서버 시간이 UTC라면 07:10 KST는 22:10 UTC다. `crontab -e`에 아래를 추가한다.
+  `10 22 * * * cd ~/soxl1000 && .venv/bin/python collector/collect.py && git add data && git commit -qm "data: $(date +\%F)" && git push -q`
+- API 키에 **선물(Futures) 읽기 권한**이 있어야 SOXLUSDT 기록이 나온다. 현물 전용 키라면 401/권한 에러가 난다.
+
+## 1. 바이낸스 준비 (서버 대신 집 PC를 쓸 때)
 1. 본계정에서 이 용도로 쓸 **읽기 전용 API 키를 새로 발급**한다(권장). 기존 매매용 키를 써도 동작하지만, 키가 유출되면 주문까지 가능해진다.
    - 출금 권한은 절대 켜지 않는다.
    - IP 제한: 스크립트를 돌리는 집 PC의 공인 IP만 허용한다.

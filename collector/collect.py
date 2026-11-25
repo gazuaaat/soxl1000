@@ -45,6 +45,14 @@ def load_env():
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip())
+    # 서버에서 이미 돌고 있는 portfolio_bot 의 config.json 키를 그대로 쓰는 경우
+    #   collector/.env 에  BINANCE_CONFIG_JSON=/home/bot/binance/portfolio_bot/config.json
+    cfg_path = os.environ.get("BINANCE_CONFIG_JSON")
+    if cfg_path and not os.environ.get("BINANCE_API_KEY"):
+        with open(cfg_path, encoding="utf-8") as f:
+            c = json.load(f)
+        os.environ["BINANCE_API_KEY"] = c["binance_api_key"]
+        os.environ["BINANCE_API_SECRET"] = c["binance_api_secret"]
 
 
 def session_window(date_str, cutoff_hour):
