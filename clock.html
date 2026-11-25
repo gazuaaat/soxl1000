@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><title>KST clock</title>
+<!-- OBS 브라우저 소스용 시계 (배경 투명). 너비 520, 높이 90 -->
+<style>
+html,body{margin:0;background:transparent;overflow:hidden}
+#c{display:inline-block;font:700 44px/1 Consolas,"Malgun Gothic",monospace;color:#fff;background:rgba(0,0,0,.65);
+   padding:16px 22px;border-radius:12px;border:2px solid #00ff8c;letter-spacing:1px}
+#c b{color:#00ff8c}
+</style></head>
+<body><div id="c"></div>
+<script>
+const f=n=>String(n).padStart(2,"0");
+function tick(){const d=new Date(Date.now()+9*3600e3);
+ document.getElementById("c").innerHTML=`<b>KST</b> ${d.getUTCFullYear()}-${f(d.getUTCMonth()+1)}-${f(d.getUTCDate())} ${f(d.getUTCHours())}:${f(d.getUTCMinutes())}:${f(d.getUTCSeconds())}`;}
+tick();setInterval(tick,200);
+</script></body></html>

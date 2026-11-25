@@ -164,7 +164,12 @@ def previous_cum_pnl(date_str):
 def build_day(cfg, date_str, trades, income, equity, wallet, unrealized, sample):
     start, end = session_window(date_str, cfg["session_cutoff_hour_kst"])
     net = income["realized_pnl"] + income["commission"] + income["funding"] + income["other"]
-    closes = [t for t in trades if abs(t["realized_pnl"]) > 0]
+    # 승/패는 체결(부분체결) 단위가 아니라 청산 주문 단위로 센다
+    by_order = {}
+    for t in trades:
+        if abs(t["realized_pnl"]) > 0:
+            by_order[t["order_id"]] = by_order.get(t["order_id"], 0.0) + t["realized_pnl"]
+    closes = [{"realized_pnl": v} for v in by_order.values()]
     return {
         "date": date_str,
         "session_start": start.isoformat(),

@@ -1,0 +1,16 @@
+{
+  "rec_dir": "~/Videos",
+  "out_dir": "~/Videos/soxl_shorts",
+  "crop": [0, 80, 1300, 1000],
+  "lookback_sec": 40,
+  "after_sec": 3,
+  "clock_offset_sec": 0,
+  "bgm": "",
+  "data_base_url": "https://raw.githubusercontent.com/gazuaaat/soxl1000/main",
+  "prefer_remote": true,
+  "site_url": "https://gazuaaat.github.io/soxl1000/",
+  "fonts": {
+    "display": ["../fonts/BlackHanSans.ttf"],
+    "body": ["C:/Windows/Fonts/malgunbd.ttf", "../fonts/BlackHanSans.ttf"]
+  }
+}
