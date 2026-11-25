@@ -1,2 +1,3 @@
 collector/.env
 __pycache__/
+collect.log
