@@ -1,5 +1,5 @@
 {
-  "updated_at": null,
+  "updated_at": "2026-11-25T17:21:20+09:00",
   "config": {
     "title": "SOXL로 하루 $1,000 벌기",
     "symbol": "SOXLUSDT",
@@ -10,5 +10,20 @@
     "youtube_url": "https://www.youtube.com/channel/UCs7fQBmuJM6li0dWTB-H32g",
     "exchange": "Binance USDⓈ-M Futures (본계정, SOXLUSDT 거래만 집계)"
   },
-  "days": []
+  "days": [
+    {
+      "date": "2026-11-24",
+      "net_pnl": 1660.54,
+      "realized_pnl": 1690.6032,
+      "fees": -30.068,
+      "funding": 0.0,
+      "trades": 130,
+      "wins": 30,
+      "losses": 13,
+      "volume": 908754.88,
+      "equity_end": 51660.54,
+      "video_url": null,
+      "sample": false
+    }
+  ]
 }
