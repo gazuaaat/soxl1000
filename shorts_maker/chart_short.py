@@ -14,7 +14,6 @@ import argparse
 import random
 import subprocess
 import sys
-from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -60,15 +59,6 @@ def to_candles(klines, minutes):
     return out
 
 
-def orders(day):
-    by = defaultdict(lambda: {"qty": 0.0, "notional": 0.0, "pnl": 0.0, "fee": 0.0})
-    for t in day["trades"]:
-        o = by[t["order_id"]]
-        o["qty"] += t["qty"]; o["notional"] += t["price"] * t["qty"]; o["pnl"] += t["realized_pnl"]
-        o["fee"] += t["fee"]; o["side"] = t["side"]
-        o["ts"] = max(o.get("ts", 0), datetime.fromisoformat(t["time"]).timestamp())
-    out = [{**o, "price": o["notional"] / o["qty"]} for o in by.values()]
-    return sorted(out, key=lambda o: o["ts"])
 
 
 # ------------------------------------------------------------------ 그리기
@@ -100,7 +90,7 @@ def render(cfg, day, n, cum, candles, ords, out_path):
     fleg = M.font(cfg, "body", 34)
     d.polygon([(80, 1440), (100, 1405), (120, 1440)], fill=M.GREEN); d.text((132, 1402), "매수", font=fleg, fill=M.WHITE)
     d.polygon([(250, 1405), (270, 1440), (290, 1405)], fill=M.RED); d.text((302, 1402), "매도", font=fleg, fill=M.WHITE)
-    d.text((440, 1402), "숫자 = 청산 손익", font=fleg, fill=M.MUTED)
+    d.text((440, 1402), "연속 체결은 1개로 · 숫자 = 손익", font=fleg, fill=M.MUTED)
 
     fclock, fbig, fsmall = M.font(cfg, "body", 46), M.font(cfg, "display", 120), M.font(cfg, "body", 40)
     flab = M.font(cfg, "display", 36)
@@ -125,8 +115,8 @@ def render(cfg, day, n, cum, candles, ords, out_path):
             if o["ts"] > now:
                 break
             net += o["pnl"] - o["fee"]; cnt += 1
-            x, y = xs(o["ts"]), ys(o["price"])
-            r = 13 if o["pnl"] else 9
+            x, y = xs(o["ts_mid"]), ys(o["price"])
+            r = 11 + min(9, o["fills"] ** 0.5 * 2)   # 체결이 많을수록 크게
             if o["side"] == "BUY":
                 d.polygon([(x - r, y + r * 1.6), (x, y + 4), (x + r, y + r * 1.6)], fill=M.GREEN, outline=(0, 0, 0))
             else:
@@ -137,7 +127,7 @@ def render(cfg, day, n, cum, candles, ords, out_path):
                 col = M.GREEN if o["pnl"] > 0 else M.RED
                 ty = y - 70 if o["side"] == "SELL" else y + 34
                 if age < 1.2:                                         # 막 체결: 크게 + 가격 표시
-                    lab = f"{'매도' if o['side'] == 'SELL' else '매수'} ${o['price']:,.2f}  {txt}"
+                    lab = f"{'매도' if o['side'] == 'SELL' else '매수'} {o['fills']}건 avg ${o['price']:,.2f}  {txt}"
                     tw = d.textlength(lab, font=flab)
                     tx = min(max(CX0, x - tw / 2), CX1 - tw)
                     d.rounded_rectangle([tx - 12, ty - 6, tx + tw + 12, ty + 46], 10, fill=(0, 0, 0))
@@ -153,7 +143,7 @@ def render(cfg, day, n, cum, candles, ords, out_path):
         d.text((W - 80 - d.textlength(speed, font=fclock), 1520), speed, font=fclock, fill=M.YELLOW)
         s = M.money(net, d=2)
         M.text_c(d, 1600, s, M.fit_font(cfg, "display", s, 150, W - 120), M.GREEN if net >= 0 else M.RED, 6)
-        M.text_c(d, 1780, f"수수료 포함 손익 · 주문 {cnt}건", fsmall, M.WHITE)
+        M.text_c(d, 1780, f"수수료 포함 손익 · 매수/매도 {cnt}회", fsmall, M.WHITE)
         ff.stdin.write(im.tobytes())
     ff.stdin.close(); ff.wait()
 
@@ -168,10 +158,10 @@ def main():
     day, site_cfg, n, cum = M.load_day(cfg, date)
     cfg["goal"] = site_cfg["goal_per_day"]
     candles = to_candles(load_klines(cfg, date, day, a.fake_klines), CANDLE_MIN)
-    ords = orders(day)
+    ords = M.runs(day)
     cfg["out_dir"].mkdir(parents=True, exist_ok=True)
     tmp = cfg["out_dir"] / f"_anim_{date}.mp4"
-    print(f"{date} DAY {n}: 주문 {len(ords)}건, 봉 {len(candles)}개 렌더링 중...")
+    print(f"{date} DAY {n}: 체결 {len(day['trades'])}건 → 매수/매도 묶음 {len(ords)}개, 봉 {len(candles)}개 렌더링 중...")
     render(cfg, day, n, cum, candles, ords, tmp)
     end_png = cfg["out_dir"] / f"_end_{date}.png"
     M.make_end(cfg, day, n, cum, end_png)

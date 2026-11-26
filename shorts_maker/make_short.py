@@ -22,7 +22,6 @@ import subprocess
 import sys
 import tempfile
 import urllib.request
-from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -71,25 +70,33 @@ def load_day(cfg, date):
     return day, idx["config"], n, cum
 
 
-def closing_orders(day):
-    """부분 체결을 주문 단위로 묶어 실현손익이 있는(청산) 주문만 돌려준다."""
-    by = defaultdict(lambda: {"pnl": 0.0, "qty": 0.0, "notional": 0.0, "time": None, "side": None})
-    for t in day["trades"]:
-        if not t["realized_pnl"]:
-            continue
-        o = by[t["order_id"]]
-        o["pnl"] += t["realized_pnl"]
-        o["qty"] += t["qty"]
-        o["notional"] += t["price"] * t["qty"]
-        o["time"] = max(o["time"] or t["time"], t["time"])
-        o["side"] = t["side"]
+def runs(day):
+    """연속된 같은 방향 체결을 하나로 묶는다 (매수 여러 건 → 매수 1개, 매도 여러 건 → 매도 1개).
+    가격은 수량가중 평균, 손익·수수료는 합계, 시각은 수량가중 평균(표시용)과 마지막 체결(완료 시점)."""
     out = []
-    for oid, o in by.items():
-        o["id"] = oid
-        o["price"] = o["notional"] / o["qty"]
-        o["dt"] = datetime.fromisoformat(o["time"])
-        out.append(o)
+    for t in sorted(day["trades"], key=lambda t: (t["time"], int(t["trade_id"]))):
+        ts = datetime.fromisoformat(t["time"]).timestamp()
+        if out and out[-1]["side"] == t["side"]:
+            r = out[-1]
+        else:
+            r = {"side": t["side"], "qty": 0.0, "notional": 0.0, "pnl": 0.0, "fee": 0.0, "fills": 0,
+                 "ts_first": ts, "ts_w": 0.0}
+            out.append(r)
+        r["qty"] += t["qty"]; r["notional"] += t["price"] * t["qty"]; r["ts_w"] += ts * t["qty"]
+        r["pnl"] += t["realized_pnl"]; r["fee"] += t["fee"]; r["fills"] += 1; r["ts"] = ts
+    for r in out:
+        r["price"] = r["notional"] / r["qty"]
+        r["ts_mid"] = r["ts_w"] / r["qty"]
+        r["dt"] = datetime.fromtimestamp(r["ts"], KST)
+        r["time"] = r["dt"].isoformat()
+        r["id"] = f"{r['side']}@{r['ts_first']:.0f}"
     return out
+
+
+def closing_runs(day):
+    return [r for r in runs(day) if abs(r["pnl"]) > 1e-9]
+
+
 
 
 # ------------------------------------------------------------------ 녹화 파일
@@ -213,8 +220,8 @@ def make_overlay(cfg, day, n, i, o, path):
     title = ("최대 수익" if win else "최대 손실") if i < 2 or not win else "수익"
     title = f"#{i + 1} {title}"
     d.text((70, 310), title, font=font(cfg, "display", 80), fill=YELLOW if win else RED)
-    side = "매도 체결" if o["side"] == "SELL" else "매수 체결"
-    sub = f"{o['dt'].strftime('%H:%M:%S')} KST · {side} ${o['price']:,.2f}"
+    side = "매도" if o["side"] == "SELL" else "매수"
+    sub = f"{o['dt'].strftime('%H:%M:%S')} KST · {side} {o['fills']}건 평균 ${o['price']:,.2f}"
     text_c(d, 1530, sub, font(cfg, "body", 48), WHITE)
     s = money(o["pnl"], d=2)
     text_c(d, 1610, s, fit_font(cfg, "display", s, 190, W - 100), GREEN if win else RED, 8)
@@ -310,9 +317,9 @@ def main():
     date = args.date or default_date()
     day, site_cfg, n, cum = load_day(cfg, date)
     cfg["goal"] = site_cfg["goal_per_day"]
-    orders = closing_orders(day)
+    orders = closing_runs(day)
     picks, covered = pick_highlights(cfg, orders, recs)
-    print(f"{date} DAY {n}: 순손익 {money(day['net_pnl'], d=2)} / 청산 주문 {len(orders)}건 중 녹화된 것 {covered}건")
+    print(f"{date} DAY {n}: 순손익 {money(day['net_pnl'], d=2)} / 청산 묶음 {len(orders)}개 중 녹화된 것 {covered}건")
     if not picks:
         sys.exit("녹화본에 들어 있는 청산 체결이 없습니다. 녹화 폴더/파일명/시계(clock_offset_sec)를 확인하세요.")
     for o in picks:
