@@ -29,6 +29,7 @@ KST = timezone(timedelta(hours=9))
 HERE = Path(__file__).resolve().parent
 SITE_DATA = HERE.parent / "data"
 DAYS_DIR = SITE_DATA / "days"
+KLINES_DIR = SITE_DATA / "klines"
 CONFIG_PATH = HERE / "config.json"
 
 
@@ -150,7 +151,21 @@ def fetch_day(cfg, date_str):
         equity = cfg["start_equity"] + previous_cum_pnl(date_str) + net
         wallet, unrealized = equity, 0.0
 
+    save_klines(ex, cfg, date_str)
     return build_day(cfg, date_str, trades, income, equity, wallet, unrealized, sample=False)
+
+
+def save_klines(ex, cfg, date_str):
+    """차트 타임랩스 쇼츠용: 세션 동안의 SOXLUSDT 1분봉 (공개 데이터)"""
+    start, end = session_window(date_str, cfg["session_cutoff_hour_kst"])
+    rows = ex.fapiPublicGetKlines({"symbol": cfg["symbol"], "interval": "1m",
+                                   "startTime": int(start.timestamp() * 1000),
+                                   "endTime": int(end.timestamp() * 1000) - 1, "limit": 1500})
+    kl = [[int(r[0]), float(r[1]), float(r[2]), float(r[3]), float(r[4]), float(r[5])] for r in rows]
+    KLINES_DIR.mkdir(parents=True, exist_ok=True)
+    (KLINES_DIR / f"{date_str}.json").write_text(
+        json.dumps({"date": date_str, "symbol": cfg["symbol"], "interval": "1m", "klines": kl}), encoding="utf-8")
+    return len(kl)
 
 
 def previous_cum_pnl(date_str):
@@ -271,6 +286,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", help="세션 날짜 YYYY-MM-DD (기본: 마지막으로 끝난 세션)")
     ap.add_argument("--sample", action="store_true", help="샘플 데이터 생성")
+    ap.add_argument("--klines-only", action="store_true", help="1분봉만 다시 받기 (지난 날짜 채우기용)")
     ap.add_argument("--sample-from", default="2026-11-02")
     ap.add_argument("--sample-to", default="2026-11-24")
     args = ap.parse_args()
@@ -281,6 +297,12 @@ def main():
             p.unlink()
         for day in make_samples(cfg, args.sample_from, args.sample_to):
             save_day(day)
+    elif args.klines_only:
+        import ccxt
+        date_str = args.date or default_session_date(cfg["session_cutoff_hour_kst"])
+        n = save_klines(ccxt.binanceusdm({"enableRateLimit": True}), cfg, date_str)
+        print(f"{date_str}: 1분봉 {n}개 저장")
+        return
     else:
         load_env()
         date_str = args.date or default_session_date(cfg["session_cutoff_hour_kst"])
