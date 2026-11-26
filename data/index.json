@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-26T08:04:08+09:00",
+  "updated_at": "2026-11-27T07:10:08+09:00",
   "config": {
     "title": "SOXL로 하루 $1,000 벌기",
     "symbol": "SOXLUSDT",
@@ -36,6 +36,20 @@
       "losses": 2,
       "volume": 1345581.78,
       "equity_end": 52807.0,
+      "video_url": null,
+      "sample": false
+    },
+    {
+      "date": "2026-11-26",
+      "net_pnl": 410.99,
+      "realized_pnl": 410.9865,
+      "fees": 0.0,
+      "funding": 0.0,
+      "trades": 10,
+      "wins": 2,
+      "losses": 0,
+      "volume": 12057.1,
+      "equity_end": 53217.99,
       "video_url": null,
       "sample": false
     }
